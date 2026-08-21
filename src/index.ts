@@ -37,13 +37,32 @@ function broadcastState(force = false): void {
 }
 
 // Notify the global bridge that this player core is ready to receive commands.
+// The global entry receives (data, playerID) and uses playerID to address us.
 iina.console.log('[HomeAssistant Bridge] CORE: registering ha_command listener; global type=' + typeof iina.global);
 if (typeof iina !== 'undefined' && iina.global) {
   try {
+    // Ask the global entry to tell us our player ID so we can report it back.
     iina.global.postMessage('ha_player_ready', {});
     iina.console.log('[HomeAssistant Bridge] CORE: sent ha_player_ready');
   } catch (err) {
     iina.console.log('[HomeAssistant Bridge] CORE ERROR sending ha_player_ready: ' + err);
+  }
+
+  // The global entry will reply with our player ID.
+  try {
+    iina.global.onMessage('ha_player_id', (data: any) => {
+      try {
+        const id = data && data.id;
+        if (id !== undefined) {
+          iina.global.postMessage('ha_register_player', { id });
+          iina.console.log('[HomeAssistant Bridge] CORE: registered player id=' + id);
+        }
+      } catch (err) {
+        iina.console.log('[HomeAssistant Bridge] CORE ERROR registering id: ' + err);
+      }
+    });
+  } catch (err) {
+    iina.console.log('[HomeAssistant Bridge] CORE ERROR onMessage ha_player_id: ' + err);
   }
 }
 

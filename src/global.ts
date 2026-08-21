@@ -325,6 +325,22 @@ class HomeAssistantBridgePlugin {
       iina.global.onMessage('ha_player_ready', (data: any, player?: string) => {
         if (player !== undefined) {
           this.activePlayers.add(player);
+          log(`RELAY: player core ready, id=${player}`);
+          // Tell the player its own ID so it can register explicitly.
+          try {
+            iina.global.postMessage(player, 'ha_player_id', { id: player });
+          } catch (err) {
+            log('ERROR: replying ha_player_id:', err);
+          }
+        } else {
+          log('RELAY: ha_player_ready without player id');
+        }
+      });
+      iina.global.onMessage('ha_register_player', (data: any) => {
+        const id = data && data.id;
+        if (id !== undefined) {
+          this.activePlayers.add(id);
+          log(`RELAY: registered player id=${id}`);
         }
       });
     } catch {
@@ -352,9 +368,10 @@ class HomeAssistantBridgePlugin {
   }
 
   /**
-   * Relay a command to all known player cores. If no player is currently
-   * active (e.g. IINA is idle with no open window) and the command needs a
-   * living player instance, create one first.
+   * Relay a command to the managed player core(s). We use a managed player
+   * instance (created via `createPlayerInstance`) so we can address it
+   * directly by ID. Broadcast-style `postMessage(null, ...)` is unreliable
+   * for reaching the main entry, so we always target the known player IDs.
    */
   private relayCommand(action: string, params: any, requiresPlayer = true): void {
     if (typeof iina === 'undefined' || !iina.global) {
@@ -362,31 +379,33 @@ class HomeAssistantBridgePlugin {
       return;
     }
 
-    const needPlayer =
-      requiresPlayer &&
-      this.activePlayers.size === 0 &&
-      (action === 'play_media');
-
-    if (needPlayer && params && params.url) {
-      log(`RELAY: no active player, creating instance for url=${params.url}`);
+    // For playback we need a living player. If none exists yet, create one.
+    if (this.activePlayers.size === 0 && action === 'play_media' && params && params.url) {
+      log(`RELAY: no managed player yet, creating instance for url=${params.url}`);
       try {
         const label = 'ha-bridge';
         const playerId = iina.global.createPlayerInstance({ url: params.url, label });
         this.activePlayers.add(playerId);
-        log(`RELAY: created player instance id=${playerId}`);
-        // The freshly created player will open the URL itself, so no relay needed.
+        log(`RELAY: created managed player id=${playerId} (it opens the URL itself)`);
         return;
       } catch (err) {
         log('ERROR: Failed to create player instance:', err);
       }
     }
 
-    log(`RELAY -> action=${action} to ${this.activePlayers.size} known player(s); postMessage type=${typeof iina.global.postMessage}`);
-    try {
-      iina.global.postMessage(null, 'ha_command', { action, params });
-      log(`RELAY: postMessage(null,'ha_command') called OK`);
-    } catch (err) {
-      log('ERROR: Failed to relay command:', err);
+    if (this.activePlayers.size === 0) {
+      log(`RELAY: no managed player to receive '${action}', dropping command`);
+      return;
+    }
+
+    log(`RELAY -> action=${action} to ${this.activePlayers.size} managed player(s)`);
+    for (const playerId of this.activePlayers) {
+      try {
+        iina.global.postMessage(playerId, 'ha_command', { action, params });
+        log(`RELAY: postMessage(${playerId},'ha_command') called OK`);
+      } catch (err) {
+        log(`ERROR: Failed to relay to player ${playerId}:`, err);
+      }
     }
   }
 
