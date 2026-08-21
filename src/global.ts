@@ -29,6 +29,7 @@ class HomeAssistantBridgePlugin {
   private controller: IINAController;
   private activeConnections: Set<string> = new Set();
   private activePlayers: Set<string | number> = new Set();
+  private _creatingPlayer = false;
   private port = 8989;
   private positionUpdateInterval: any = null;
   private lastBroadcastStateJson = '';
@@ -340,6 +341,7 @@ class HomeAssistantBridgePlugin {
         const id = data && data.id;
         if (id !== undefined) {
           this.activePlayers.add(id);
+          this._creatingPlayer = false;
           log(`RELAY: registered player id=${id}`);
         }
       });
@@ -380,17 +382,28 @@ class HomeAssistantBridgePlugin {
     }
 
     // For playback we need a living player. If none exists yet, create one.
+    // Guard with a flag so we never create more than one instance per request
+    // (avoids recursion / crash if the new player re-triggers commands).
     if (this.activePlayers.size === 0 && action === 'play_media' && params && params.url) {
+      if (this._creatingPlayer) {
+        log('RELAY: player creation already in progress, skipping');
+        return;
+      }
+      this._creatingPlayer = true;
       log(`RELAY: no managed player yet, creating instance for url=${params.url}`);
+      let created = false;
       try {
         const label = 'ha-bridge';
         const playerId = iina.global.createPlayerInstance({ url: params.url, label });
         this.activePlayers.add(playerId);
+        created = true;
         log(`RELAY: created managed player id=${playerId} (it opens the URL itself)`);
         return;
       } catch (err) {
+        this._creatingPlayer = false;
         log('ERROR: Failed to create player instance:', err);
       }
+      if (created) return;
     }
 
     if (this.activePlayers.size === 0) {
@@ -427,9 +440,13 @@ class HomeAssistantBridgePlugin {
 }
 
 // Initialize and start the global bridge instance
-log('Creating plugin instance...');
-const plugin = new HomeAssistantBridgePlugin();
-plugin.start().then(
-  () => log('plugin.start() resolved OK'),
-  (err) => log('ERROR: plugin.start() FAILED:', err),
-);
+try {
+  log('Creating plugin instance...');
+  const plugin = new HomeAssistantBridgePlugin();
+  plugin.start().then(
+    () => log('plugin.start() resolved OK'),
+    (err) => log('ERROR: plugin.start() FAILED:', err),
+  );
+} catch (err) {
+  log('FATAL: plugin initialization threw:', err);
+}
