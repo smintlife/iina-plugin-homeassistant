@@ -15,6 +15,7 @@ class HomeAssistantBridgePlugin {
   private zeroconfHelper: ZeroconfHelper;
   private controller: IINAController;
   private activeConnections: Set<string> = new Set();
+  private activePlayers: Set<string | number> = new Set();
   private port = 8989;
   private positionUpdateInterval: any = null;
   private lastBroadcastStateJson = '';
@@ -98,13 +99,9 @@ class HomeAssistantBridgePlugin {
 
     // Relay the command to all player cores (main entries). They own the
     // actual playback control and will report state back via the relay.
-    if (typeof iina !== 'undefined' && iina.global) {
-      try {
-        iina.global.postMessage(null, 'ha_command', { action, params });
-      } catch {
-        // Fall back to direct control below.
-      }
-    }
+    // Commands that require a living player instance (e.g. play_media when
+    // IINA is idle) will create a player if needed.
+    this.relayCommand(action, params);
 
     try {
       switch (action) {
@@ -155,12 +152,12 @@ class HomeAssistantBridgePlugin {
           break;
 
         case 'play_media':
-          if (params.url) {
-            await this.controller.playMedia(params.url, params.enqueue || 'play', Boolean(params.announce));
-          } else {
+          if (!params.url) {
             success = false;
             error = 'Missing url parameter';
           }
+          // Actual open/load is handled by the player core (relayed above)
+          // or by createPlayerInstance when no player is active.
           break;
 
         case 'turn_off':
@@ -293,6 +290,17 @@ class HomeAssistantBridgePlugin {
   private setupPlayerRelay(): void {
     if (typeof iina === 'undefined' || !iina.global) return;
 
+    // Track player instances created/registered via the bridge.
+    try {
+      iina.global.onMessage('ha_player_ready', (data: any, player?: string) => {
+        if (player !== undefined) {
+          this.activePlayers.add(player);
+        }
+      });
+    } catch {
+      // global module unavailable
+    }
+
     // Receive playback state from player cores and forward to WebSocket clients.
     try {
       iina.global.onMessage('ha_player_state', (state: any) => {
@@ -310,6 +318,42 @@ class HomeAssistantBridgePlugin {
       });
     } catch {
       // global module unavailable
+    }
+  }
+
+  /**
+   * Relay a command to all known player cores. If no player is currently
+   * active (e.g. IINA is idle with no open window) and the command needs a
+   * living player instance, create one first.
+   */
+  private relayCommand(action: string, params: any, requiresPlayer = true): void {
+    if (typeof iina === 'undefined' || !iina.global) {
+      // Fall back to direct control via the global controller (only works
+      // when running inside a player core context).
+      return;
+    }
+
+    const needPlayer =
+      requiresPlayer &&
+      this.activePlayers.size === 0 &&
+      (action === 'play_media');
+
+    if (needPlayer && params && params.url) {
+      try {
+        const label = 'ha-bridge';
+        const playerId = iina.global.createPlayerInstance({ url: params.url, label });
+        this.activePlayers.add(playerId);
+        // The freshly created player will open the URL itself, so no relay needed.
+        return;
+      } catch (err) {
+        console.error('[HomeAssistant Bridge] Failed to create player instance:', err);
+      }
+    }
+
+    try {
+      iina.global.postMessage(null, 'ha_command', { action, params });
+    } catch (err) {
+      console.error('[HomeAssistant Bridge] Failed to relay command:', err);
     }
   }
 

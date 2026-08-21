@@ -36,6 +36,15 @@ function broadcastState(force = false): void {
   }
 }
 
+// Notify the global bridge that this player core is ready to receive commands.
+if (typeof iina !== 'undefined' && iina.global) {
+  try {
+    iina.global.postMessage('ha_player_ready', {});
+  } catch {
+    // global module unavailable
+  }
+}
+
 // Listen for commands coming from the global entry.
 if (typeof iina !== 'undefined' && iina.global) {
   iina.global.onMessage('ha_command', (data: any) => {
