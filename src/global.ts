@@ -280,7 +280,7 @@ class HomeAssistantBridgePlugin {
       if (typeof iina !== 'undefined' && iina.menu) {
         iina.menu.addItem('Home Assistant Bridge Status', () => {
           const clientCount = this.activeConnections.size;
-          const msg = `HA Bridge läuft auf Port ${this.port} (${clientCount} verbundene(r) Client(s))`;
+          const msg = `HA Bridge running on port ${this.port} (${clientCount} connected client(s))`;
           if (iina.core && typeof iina.core.osd === 'function') {
             iina.core.osd(msg);
           }

@@ -1,42 +1,42 @@
 # IINA Plugin for Home Assistant Bridge
 
-Ein IINA Media Player Plugin (macOS), das einen lokalen WebSocket-Server startet, um den Player in Echtzeit über Home Assistant fernzusteuern.
+An IINA Media Player plugin (macOS) that starts a local WebSocket server to remotely control the player in real time via Home Assistant.
 
-## 🚀 Funktionen
-- **WebSocket Server** (`iina.ws`): Unterstützt Port-Konfiguration (Standard: `8989`).
-- **Bidirektionale Echtzeit-Synchronisation**: Pusht Playback-Status (`playing`, `paused`, `buffering`, `idle`), Track-Metadaten (Titel, Interpret, Album), Position, Gesamtdauer, YouTube-Cover & Lautstärke direkt an Home Assistant.
-- **YouTube & Web-Streaming**: Spielt YouTube-Links und Web-Streams via mpv / yt-dlp ab.
-- **Playlist & Queue Management**: Unterstützt `replace`, `play`, `add` (an Playlist anhängen) und `next`.
-- **TTS-Ducking & Resume**: Pausiert bei Home Assistant TTS-Durchsagen (`announce: true`) die aktuelle Musik und setzt sie nach der Durchsage automatisch an der gemerkten Position fort.
-- **Bonjour / Zeroconf**: Automatische Bekanntgabe im lokalen Netzwerk (`_iina-remote._tcp`).
+## 🚀 Features
+- **WebSocket Server** (`iina.ws`): Supports configurable port (default: `8989`).
+- **Bi-directional Real-time Sync**: Pushes playback state (`playing`, `paused`, `buffering`, `idle`), track metadata (title, artist, album), position, total duration, YouTube cover art, and volume directly to Home Assistant.
+- **YouTube & Web Streaming**: Plays YouTube links and web streams via mpv / yt-dlp.
+- **Playlist & Queue Management**: Supports `replace`, `play`, `add` (append to playlist), and `next`.
+- **TTS Ducking & Resume**: Pauses currently playing music during Home Assistant TTS announcements (`announce: true`) and automatically resumes playback at the saved position afterwards.
+- **Bonjour / Zeroconf**: Automatic advertisement on the local network (`_iina-remote._tcp`).
 
 ---
 
-## 🛠️ Entwicklung & Build
+## 🛠️ Development & Build
 
-### Voraussetzungen
+### Prerequisites
 - [Node.js](https://nodejs.org/) (>= v18)
 
-### Installation der Abhängigkeiten
+### Installing Dependencies
 ```bash
 npm install
 ```
 
-### Plugin kompilieren
+### Compiling the Plugin
 ```bash
 npm run build
 ```
 
-### Installierbares `.iinaplgz` Paket erzeugen
+### Creating Installable `.iinaplgz` Package
 ```bash
 npm run package
 ```
-Das fertige Paket liegt anschließend im Ordner `build/homeassistant.iinaplgz`.
+The ready-to-use package will be located at `build/homeassistant.iinaplgz`.
 
 ---
 
 ## 📦 Installation in IINA
 
-1. Doppelklicken Sie auf die erzeugte Datei `build/homeassistant.iinaplgz` oder öffnen Sie **IINA -> Einstellungen -> Plugins** und installieren Sie das Plugin.
-2. Aktivieren Sie das Plugin **Home Assistant Bridge**.
-3. Der WebSocket Server lauscht standardmäßig auf Port `8989`.
+1. Double-click the generated `build/homeassistant.iinaplgz` file, or open **IINA -> Settings -> Plugins** and install the plugin package.
+2. Enable the **Home Assistant Bridge** plugin.
+3. The WebSocket server listens on port `8989` by default.

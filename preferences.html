@@ -74,18 +74,18 @@
 </head>
 <body>
   <h2>Home Assistant Bridge</h2>
-  <p>Konfigurieren Sie den WebSocket-Server für die Home Assistant Integration.</p>
+  <p>Configure the WebSocket server settings for Home Assistant integration.</p>
 
   <div class="form-group">
     <label for="port-input">WebSocket Server Port:</label>
     <input type="number" id="port-input" data-pref-key="port" min="1024" max="65535" step="1" value="8989">
-    <div class="description">Standardport: 8989. Ein Neustart von IINA oder erneutes Aktivieren des Plugins übernimmt geänderte Ports.</div>
+    <div class="description">Default port: 8989. Restart IINA or reload the plugin to apply port changes.</div>
   </div>
 
   <div class="card">
-    <div><span class="status-badge"></span><strong>WebSocket Server:</strong> Aktiv</div>
+    <div><span class="status-badge"></span><strong>WebSocket Server:</strong> Active</div>
     <div class="description" style="margin-top: 6px;">
-      Home Assistant verbindet sich per <code>ws://&lt;Mac-IP&gt;:&lt;Port&gt;</code>.
+      Home Assistant connects via <code>ws://&lt;Mac-IP&gt;:&lt;Port&gt;</code>.
     </div>
   </div>
 </body>
