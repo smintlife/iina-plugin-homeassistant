@@ -81,11 +81,24 @@ class HomeAssistantBridgePlugin {
         });
       }
 
+      if (typeof iina.ws.onNewConnection === 'function') {
+        iina.ws.onNewConnection((conn: string) => {
+          log(`WS NEW CONNECTION: ${conn}`);
+        });
+      }
+
+      if (typeof iina.ws.onConnectionStateUpdate === 'function') {
+        iina.ws.onConnectionStateUpdate((conn: string, state: string) => {
+          log(`WS CONN STATE: ${conn} -> ${state}`);
+        });
+      }
+
       iina.ws.onMessage((conn: string, message: { text: () => string; data: () => Uint8Array }) => {
         this.activeConnections.add(conn);
         try {
           const rawText = message.text();
-          log(`WS RECV <- ${rawText}`);
+          const hasData = typeof message.data === 'function' ? (message.data().length > 0) : false;
+          log(`WS RECV <- conn=${conn} text="${rawText}" hasBinaryData=${hasData}`);
           if (!rawText) return;
           const req: WsRequestMessage = JSON.parse(rawText);
           this.handleIncomingRequest(conn, req);
