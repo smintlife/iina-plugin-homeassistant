@@ -10,7 +10,18 @@ import { IINAController } from './iina_controller';
 
 declare const iina: any;
 
-console.log('[HomeAssistant Bridge] global.js LOADED (module evaluated)');
+function log(...args: any[]): void {
+  const msg = args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+  try {
+    if (typeof iina !== 'undefined' && iina.console) {
+      iina.console.log(`[HomeAssistant Bridge] ${msg}`);
+      return;
+    }
+  } catch { /* fall through */ }
+  console.log(`[HomeAssistant Bridge] ${msg}`);
+}
+
+log('global.js LOADED (module evaluated)');
 
 class HomeAssistantBridgePlugin {
   private ttsManager: TTSManager;
@@ -29,7 +40,7 @@ class HomeAssistantBridgePlugin {
   }
 
   public async start(): Promise<void> {
-    console.log('[HomeAssistant Bridge] Initializing plugin...');
+    log('Initializing plugin...');
 
     // Load port from preferences
     try {
@@ -40,7 +51,7 @@ class HomeAssistantBridgePlugin {
         }
       }
     } catch (err) {
-      console.log('[HomeAssistant Bridge] Using default port:', this.port);
+      log('Using default port:', this.port);
     }
 
     this.setupWebSocketServer();
@@ -55,18 +66,18 @@ class HomeAssistantBridgePlugin {
 
   private setupWebSocketServer(): void {
     if (typeof iina === 'undefined' || !iina.ws) {
-      console.error('[HomeAssistant Bridge] iina.ws module is not available.');
+      log('ERROR: iina.ws module is not available.');
       return;
     }
 
-    console.log(`[HomeAssistant Bridge] Setting up WebSocket server on port ${this.port}`);
+    log(`Setting up WebSocket server on port ${this.port}`);
 
     try {
       iina.ws.createServer({ port: this.port });
 
       if (typeof iina.ws.onStateUpdate === 'function') {
         iina.ws.onStateUpdate((state: string) => {
-          console.log(`[HomeAssistant Bridge] WebSocket Server state: ${state}`);
+          log(`WebSocket Server state: ${state}`);
         });
       }
 
@@ -74,12 +85,12 @@ class HomeAssistantBridgePlugin {
         this.activeConnections.add(conn);
         try {
           const rawText = message.text();
-          console.log(`[HomeAssistant Bridge] WS RECV <- ${rawText}`);
+          log(`WS RECV <- ${rawText}`);
           if (!rawText) return;
           const req: WsRequestMessage = JSON.parse(rawText);
           this.handleIncomingRequest(conn, req);
         } catch (err: any) {
-          console.error('[HomeAssistant Bridge] Failed to parse message:', err);
+          log('ERROR: Failed to parse message:', err);
           this.sendResponse(conn, {
             id: undefined,
             success: false,
@@ -88,11 +99,11 @@ class HomeAssistantBridgePlugin {
         }
       });
 
-      console.log('[HomeAssistant Bridge] Calling iina.ws.startServer()...');
+      log('Calling iina.ws.startServer()...');
       iina.ws.startServer();
-      console.log(`[HomeAssistant Bridge] WebSocket server started on port ${this.port}`);
+      log(`WebSocket server started on port ${this.port}`);
     } catch (err) {
-      console.error('[HomeAssistant Bridge] Error starting WebSocket server:', err);
+      log('ERROR: starting WebSocket server:', err);
     }
   }
 
@@ -234,7 +245,7 @@ class HomeAssistantBridgePlugin {
         }
       }
     } catch (err) {
-      console.error('[HomeAssistant Bridge] Error broadcasting state:', err);
+      log('ERROR: broadcasting state:', err);
     }
   }
 
@@ -334,7 +345,7 @@ class HomeAssistantBridgePlugin {
    */
   private relayCommand(action: string, params: any, requiresPlayer = true): void {
     if (typeof iina === 'undefined' || !iina.global) {
-      console.log('[HomeAssistant Bridge] RELAY: no global module, cannot relay');
+      log('RELAY: no global module, cannot relay');
       return;
     }
 
@@ -344,24 +355,24 @@ class HomeAssistantBridgePlugin {
       (action === 'play_media');
 
     if (needPlayer && params && params.url) {
-      console.log(`[HomeAssistant Bridge] RELAY: no active player, creating instance for url=${params.url}`);
+      log(`RELAY: no active player, creating instance for url=${params.url}`);
       try {
         const label = 'ha-bridge';
         const playerId = iina.global.createPlayerInstance({ url: params.url, label });
         this.activePlayers.add(playerId);
-        console.log(`[HomeAssistant Bridge] RELAY: created player instance id=${playerId}`);
+        log(`RELAY: created player instance id=${playerId}`);
         // The freshly created player will open the URL itself, so no relay needed.
         return;
       } catch (err) {
-        console.error('[HomeAssistant Bridge] Failed to create player instance:', err);
+        log('ERROR: Failed to create player instance:', err);
       }
     }
 
-    console.log(`[HomeAssistant Bridge] RELAY -> action=${action} to ${this.activePlayers.size} known player(s)`);
+    log(`RELAY -> action=${action} to ${this.activePlayers.size} known player(s)`);
     try {
       iina.global.postMessage(null, 'ha_command', { action, params });
     } catch (err) {
-      console.error('[HomeAssistant Bridge] Failed to relay command:', err);
+      log('ERROR: Failed to relay command:', err);
     }
   }
 
@@ -383,9 +394,9 @@ class HomeAssistantBridgePlugin {
 }
 
 // Initialize and start the global bridge instance
-console.log('[HomeAssistant Bridge] Creating plugin instance...');
+log('Creating plugin instance...');
 const plugin = new HomeAssistantBridgePlugin();
 plugin.start().then(
-  () => console.log('[HomeAssistant Bridge] plugin.start() resolved OK'),
-  (err) => console.error('[HomeAssistant Bridge] plugin.start() FAILED:', err),
+  () => log('plugin.start() resolved OK'),
+  (err) => log('ERROR: plugin.start() FAILED:', err),
 );

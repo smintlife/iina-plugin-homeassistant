@@ -258,17 +258,17 @@ export class IINAController {
     if (typeof iina !== 'undefined') {
       const idle = Boolean(iina.mpv && iina.mpv.get('idle-active'));
       const hasWindow = Boolean(iina.core && iina.core.window);
-      console.log(`[HomeAssistant Bridge] playMedia: url=${url} enqueue=${enqueue} idle=${idle} hasWindow=${hasWindow}`);
+      iina.console.log(`[HomeAssistant Bridge] playMedia: url=${url} enqueue=${enqueue} idle=${idle} hasWindow=${hasWindow}`);
 
       if (!hasWindow || idle || enqueue === 'play' || enqueue === 'replace') {
         if (iina.core && typeof iina.core.open === 'function') {
-          console.log('[HomeAssistant Bridge] playMedia: using iina.core.open');
+          iina.console.log('[HomeAssistant Bridge] playMedia: using iina.core.open');
           iina.core.open(url);
         } else if (iina.mpv) {
-          console.log('[HomeAssistant Bridge] playMedia: using mpv loadfile replace');
+          iina.console.log('[HomeAssistant Bridge] playMedia: using mpv loadfile replace');
           iina.mpv.command('loadfile', url, 'replace');
         } else {
-          console.log('[HomeAssistant Bridge] playMedia: NO open path available (no core.open, no mpv)');
+          iina.console.log('[HomeAssistant Bridge] playMedia: NO open path available (no core.open, no mpv)');
         }
       } else if (enqueue === 'add') {
         if (iina.mpv) {

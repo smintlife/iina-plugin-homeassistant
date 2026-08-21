@@ -50,7 +50,7 @@ if (typeof iina !== 'undefined' && iina.global) {
   iina.global.onMessage('ha_command', (data: any) => {
     try {
       if (!data || !data.action) return;
-      console.log(`[HomeAssistant Bridge] CORE RECV <- action=${data.action} params=${JSON.stringify(data.params)}`);
+      iina.console.log(`[HomeAssistant Bridge] CORE RECV <- action=${data.action} params=${JSON.stringify(data.params)}`);
       switch (data.action) {
         case 'play':
           controller.play();
@@ -90,10 +90,10 @@ if (typeof iina !== 'undefined' && iina.global) {
           break;
         case 'play_media':
           if (data.params && data.params.url) {
-            console.log(`[HomeAssistant Bridge] CORE play_media: opening url=${data.params.url}`);
+            iina.console.log(`[HomeAssistant Bridge] CORE play_media: opening url=${data.params.url}`);
             controller.playMedia(data.params.url, data.params.enqueue || 'play', Boolean(data.params.announce));
           } else {
-            console.log('[HomeAssistant Bridge] CORE play_media: missing url');
+            iina.console.log('[HomeAssistant Bridge] CORE play_media: missing url');
           }
           break;
         case 'turn_off':
@@ -148,5 +148,5 @@ setInterval(() => {
   }
 }, 1000);
 
-console.log('[HomeAssistant Bridge] Player core instance loaded.');
+iina.console.log('[HomeAssistant Bridge] Player core instance loaded.');
 broadcastState(true);
