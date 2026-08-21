@@ -10,6 +10,8 @@ import { IINAController } from './iina_controller';
 
 declare const iina: any;
 
+console.log('[HomeAssistant Bridge] global.js LOADED (module evaluated)');
+
 class HomeAssistantBridgePlugin {
   private ttsManager: TTSManager;
   private zeroconfHelper: ZeroconfHelper;
@@ -57,6 +59,8 @@ class HomeAssistantBridgePlugin {
       return;
     }
 
+    console.log(`[HomeAssistant Bridge] Setting up WebSocket server on port ${this.port}`);
+
     try {
       iina.ws.createServer({ port: this.port });
 
@@ -84,6 +88,7 @@ class HomeAssistantBridgePlugin {
         }
       });
 
+      console.log('[HomeAssistant Bridge] Calling iina.ws.startServer()...');
       iina.ws.startServer();
       console.log(`[HomeAssistant Bridge] WebSocket server started on port ${this.port}`);
     } catch (err) {
@@ -378,5 +383,9 @@ class HomeAssistantBridgePlugin {
 }
 
 // Initialize and start the global bridge instance
+console.log('[HomeAssistant Bridge] Creating plugin instance...');
 const plugin = new HomeAssistantBridgePlugin();
-plugin.start();
+plugin.start().then(
+  () => console.log('[HomeAssistant Bridge] plugin.start() resolved OK'),
+  (err) => console.error('[HomeAssistant Bridge] plugin.start() FAILED:', err),
+);
