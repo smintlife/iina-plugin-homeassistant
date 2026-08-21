@@ -247,6 +247,7 @@ export class IINAController {
   }
 
   public async playMedia(url: string, enqueue: 'play' | 'replace' | 'add' | 'next' = 'play', announce = false): Promise<void> {
+    iina.console.log(`[HomeAssistant Bridge] playMedia ENTERED url=${url}`);
     if (!url) return;
 
     if (announce) {
