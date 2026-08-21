@@ -1,0 +1,26 @@
+{
+  "name": "iina-plugin-homeassistant",
+  "version": "1.0.0",
+  "description": "IINA Media Player plugin for bidirectional Home Assistant remote control via WebSocket",
+  "main": "dist/global.js",
+  "scripts": {
+    "build": "node esbuild.config.js",
+    "watch": "node esbuild.config.js --watch",
+    "package": "node esbuild.config.js && node scripts/package.js"
+  },
+  "keywords": [
+    "iina",
+    "iina-plugin",
+    "home-assistant",
+    "media-player",
+    "websocket"
+  ],
+  "author": "AlexRoh",
+  "license": "MIT",
+  "devDependencies": {
+    "archiver": "^7.0.1",
+    "esbuild": "^0.25.0",
+    "iina-plugin-definition": "*",
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "Home Assistant Bridge",
+  "version": "1.0.0",
+  "identifier": "io.iina.homeassistant",
+  "author": {
+    "name": "AlexRoh"
+  },
+  "description": "Bi-directional Home Assistant remote control bridge for IINA media player via WebSocket",
+  "globalEntry": "dist/global.js",
+  "permissions": [
+    "network-request",
+    "file-system"
+  ],
+  "allowedDomains": [
+    "*"
+  ],
+  "preferenceDefaults": {
+    "port": 8989
+  },
+  "preferencesPage": "preferences.html"
+}
