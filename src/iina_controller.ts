@@ -195,22 +195,22 @@ export class IINAController {
 
   public playPause(): void {
     if (typeof iina !== 'undefined' && iina.mpv) {
-      iina.mpv.command('cycle', 'pause');
+      iina.mpv.command('cycle', ['pause']);
     }
   }
 
   public stop(): void {
     if (typeof iina !== 'undefined' && iina.mpv) {
-      iina.mpv.command('stop');
+      iina.mpv.command('stop', []);
     }
   }
 
   public seek(position?: number, relative?: number): void {
     if (typeof iina !== 'undefined' && iina.mpv) {
       if (typeof position === 'number') {
-        iina.mpv.command('seek', position, 'absolute');
+        iina.mpv.command('seek', [position, 'absolute']);
       } else if (typeof relative === 'number') {
-        iina.mpv.command('seek', relative, 'relative');
+        iina.mpv.command('seek', [relative, 'relative']);
       }
     }
   }
@@ -230,19 +230,19 @@ export class IINAController {
 
   public volumeStep(step: number): void {
     if (typeof iina !== 'undefined' && iina.mpv) {
-      iina.mpv.command('add', 'volume', step);
+      iina.mpv.command('add', ['volume', step]);
     }
   }
 
   public nextTrack(): void {
     if (typeof iina !== 'undefined' && iina.mpv) {
-      iina.mpv.command('playlist-next', 'weak');
+      iina.mpv.command('playlist-next', ['weak']);
     }
   }
 
   public prevTrack(): void {
     if (typeof iina !== 'undefined' && iina.mpv) {
-      iina.mpv.command('playlist-prev', 'weak');
+      iina.mpv.command('playlist-prev', ['weak']);
     }
   }
 
@@ -266,9 +266,10 @@ export class IINAController {
       if (!hasWindow || idle || enqueue === 'play' || enqueue === 'replace') {
         // Prefer mpv's loadfile (async, safe) over iina.core.open which can
         // block/freeze the player core in this context.
+        // IINA's mpv bridge expects args as an array: command(name, [args]).
         if (iina.mpv && typeof iina.mpv.command === 'function') {
           iina.console.log('[HomeAssistant Bridge] playMedia: using mpv loadfile replace');
-          try { iina.mpv.command('loadfile', url, 'replace'); } catch (e) { iina.console.log('[HomeAssistant Bridge] mpv loadfile ERROR: ' + e); }
+          try { iina.mpv.command('loadfile', [url, 'replace']); } catch (e) { iina.console.log('[HomeAssistant Bridge] mpv loadfile ERROR: ' + e); }
         } else if (iina.core && typeof iina.core.open === 'function') {
           iina.console.log('[HomeAssistant Bridge] playMedia: using iina.core.open (fallback)');
           try { iina.core.open(url); } catch (e) { iina.console.log('[HomeAssistant Bridge] core.open ERROR: ' + e); }
@@ -277,11 +278,11 @@ export class IINAController {
         }
       } else if (enqueue === 'add') {
         if (iina.mpv) {
-          iina.mpv.command('loadfile', url, 'append');
+          iina.mpv.command('loadfile', [url, 'append']);
         }
       } else if (enqueue === 'next') {
         if (iina.mpv) {
-          iina.mpv.command('loadfile', url, 'append');
+          iina.mpv.command('loadfile', [url, 'append']);
         }
       }
     }
@@ -313,7 +314,7 @@ export class IINAController {
       if (iina.core && typeof iina.core.open === 'function') {
         iina.core.open(url);
       } else if (iina.mpv) {
-        iina.mpv.command('loadfile', url, 'replace');
+        iina.mpv.command('loadfile', [url, 'replace']);
       }
 
       // Seek and set pause state after a short buffer
@@ -321,7 +322,7 @@ export class IINAController {
         try {
           if (iina.mpv) {
             if (position > 0) {
-              iina.mpv.command('seek', position, 'absolute');
+              iina.mpv.command('seek', [position, 'absolute']);
             }
             iina.mpv.set('pause', paused);
           }
