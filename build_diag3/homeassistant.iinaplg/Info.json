@@ -1,0 +1,22 @@
+{
+  "name": "HA Diag3",
+  "version": "1.0.0",
+  "identifier": "io.iina.homeassistant.diag3",
+  "author": {
+    "name": "AlexRoh"
+  },
+  "description": "Bi-directional Home Assistant remote control bridge for IINA media player via WebSocket",
+  "entry": "dist/main.js",
+  "globalEntry": "dist/diag3_global.js",
+  "permissions": [
+    "network-request",
+    "file-system"
+  ],
+  "allowedDomains": [
+    "*"
+  ],
+  "preferenceDefaults": {
+    "port": 8989
+  },
+  "preferencesPage": "preferences.html"
+}
