@@ -70,6 +70,7 @@ class HomeAssistantBridgePlugin {
         this.activeConnections.add(conn);
         try {
           const rawText = message.text();
+          console.log(`[HomeAssistant Bridge] WS RECV <- ${rawText}`);
           if (!rawText) return;
           const req: WsRequestMessage = JSON.parse(rawText);
           this.handleIncomingRequest(conn, req);
@@ -328,8 +329,7 @@ class HomeAssistantBridgePlugin {
    */
   private relayCommand(action: string, params: any, requiresPlayer = true): void {
     if (typeof iina === 'undefined' || !iina.global) {
-      // Fall back to direct control via the global controller (only works
-      // when running inside a player core context).
+      console.log('[HomeAssistant Bridge] RELAY: no global module, cannot relay');
       return;
     }
 
@@ -339,10 +339,12 @@ class HomeAssistantBridgePlugin {
       (action === 'play_media');
 
     if (needPlayer && params && params.url) {
+      console.log(`[HomeAssistant Bridge] RELAY: no active player, creating instance for url=${params.url}`);
       try {
         const label = 'ha-bridge';
         const playerId = iina.global.createPlayerInstance({ url: params.url, label });
         this.activePlayers.add(playerId);
+        console.log(`[HomeAssistant Bridge] RELAY: created player instance id=${playerId}`);
         // The freshly created player will open the URL itself, so no relay needed.
         return;
       } catch (err) {
@@ -350,6 +352,7 @@ class HomeAssistantBridgePlugin {
       }
     }
 
+    console.log(`[HomeAssistant Bridge] RELAY -> action=${action} to ${this.activePlayers.size} known player(s)`);
     try {
       iina.global.postMessage(null, 'ha_command', { action, params });
     } catch (err) {
