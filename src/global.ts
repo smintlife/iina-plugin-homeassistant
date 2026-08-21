@@ -381,9 +381,10 @@ class HomeAssistantBridgePlugin {
       }
     }
 
-    log(`RELAY -> action=${action} to ${this.activePlayers.size} known player(s)`);
+    log(`RELAY -> action=${action} to ${this.activePlayers.size} known player(s); postMessage type=${typeof iina.global.postMessage}`);
     try {
       iina.global.postMessage(null, 'ha_command', { action, params });
+      log(`RELAY: postMessage(null,'ha_command') called OK`);
     } catch (err) {
       log('ERROR: Failed to relay command:', err);
     }

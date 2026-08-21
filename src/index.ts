@@ -37,11 +37,13 @@ function broadcastState(force = false): void {
 }
 
 // Notify the global bridge that this player core is ready to receive commands.
+iina.console.log('[HomeAssistant Bridge] CORE: registering ha_command listener; global type=' + typeof iina.global);
 if (typeof iina !== 'undefined' && iina.global) {
   try {
     iina.global.postMessage('ha_player_ready', {});
-  } catch {
-    // global module unavailable
+    iina.console.log('[HomeAssistant Bridge] CORE: sent ha_player_ready');
+  } catch (err) {
+    iina.console.log('[HomeAssistant Bridge] CORE ERROR sending ha_player_ready: ' + err);
   }
 }
 
