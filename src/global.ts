@@ -322,27 +322,16 @@ class HomeAssistantBridgePlugin {
     if (typeof iina === 'undefined' || !iina.global) return;
 
     // Track player instances created/registered via the bridge.
+    // NOTE: do NOT call iina.global.postMessage(player, 'ha_player_id', ...)
+    // in reply — that native call crashes IINA. The player ID supplied by the
+    // 'ha_player_ready' callback is enough to target commands at the core.
     try {
       iina.global.onMessage('ha_player_ready', (data: any, player?: string) => {
         if (player !== undefined) {
           this.activePlayers.add(player);
           log(`RELAY: player core ready, id=${player}`);
-          // Tell the player its own ID so it can register explicitly.
-          try {
-            iina.global.postMessage(player, 'ha_player_id', { id: player });
-          } catch (err) {
-            log('ERROR: replying ha_player_id:', err);
-          }
         } else {
           log('RELAY: ha_player_ready without player id');
-        }
-      });
-      iina.global.onMessage('ha_register_player', (data: any) => {
-        const id = data && data.id;
-        if (id !== undefined) {
-          this.activePlayers.add(id);
-          this._creatingPlayer = false;
-          log(`RELAY: registered player id=${id}`);
         }
       });
     } catch {
