@@ -264,12 +264,14 @@ export class IINAController {
       iina.console.log(`[HomeAssistant Bridge] playMedia: url=${url} enqueue=${enqueue} idle=${idle} hasWindow=${hasWindow}`);
 
       if (!hasWindow || idle || enqueue === 'play' || enqueue === 'replace') {
-        if (iina.core && typeof iina.core.open === 'function') {
-          iina.console.log('[HomeAssistant Bridge] playMedia: using iina.core.open');
-          try { iina.core.open(url); } catch (e) { iina.console.log('[HomeAssistant Bridge] core.open ERROR: ' + e); }
-        } else if (iina.mpv) {
+        // Prefer mpv's loadfile (async, safe) over iina.core.open which can
+        // block/freeze the player core in this context.
+        if (iina.mpv && typeof iina.mpv.command === 'function') {
           iina.console.log('[HomeAssistant Bridge] playMedia: using mpv loadfile replace');
           try { iina.mpv.command('loadfile', url, 'replace'); } catch (e) { iina.console.log('[HomeAssistant Bridge] mpv loadfile ERROR: ' + e); }
+        } else if (iina.core && typeof iina.core.open === 'function') {
+          iina.console.log('[HomeAssistant Bridge] playMedia: using iina.core.open (fallback)');
+          try { iina.core.open(url); } catch (e) { iina.console.log('[HomeAssistant Bridge] core.open ERROR: ' + e); }
         } else {
           iina.console.log('[HomeAssistant Bridge] playMedia: NO open path available (no core.open, no mpv)');
         }

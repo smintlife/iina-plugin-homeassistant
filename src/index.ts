@@ -94,7 +94,14 @@ if (typeof iina !== 'undefined' && iina.global) {
         case 'play_media':
           if (data.params && data.params.url) {
             iina.console.log(`[HomeAssistant Bridge] CORE play_media: opening url=${data.params.url}`);
-            controller.playMedia(data.params.url, data.params.enqueue || 'play', Boolean(data.params.announce));
+            // Defer so the onMessage handler returns immediately and cannot freeze.
+            setTimeout(() => {
+              try {
+                controller.playMedia(data.params.url, data.params.enqueue || 'play', Boolean(data.params.announce));
+              } catch (err) {
+                iina.console.log('[HomeAssistant Bridge] CORE play_media ERROR: ' + err);
+              }
+            }, 0);
           } else {
             iina.console.log('[HomeAssistant Bridge] CORE play_media: missing url');
           }
