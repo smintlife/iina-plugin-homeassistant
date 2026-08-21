@@ -44,6 +44,7 @@ class HomeAssistantBridgePlugin {
     this.setupIINAEventListeners();
     this.setupMenuItems();
     this.startPeriodicPositionSync();
+    this.setupPlayerRelay();
 
     // Start Bonjour advertisement
     await this.zeroconfHelper.startAdvertisement(this.port);
@@ -94,6 +95,16 @@ class HomeAssistantBridgePlugin {
     let success = true;
     let error: string | undefined;
     let result: any = null;
+
+    // Relay the command to all player cores (main entries). They own the
+    // actual playback control and will report state back via the relay.
+    if (typeof iina !== 'undefined' && iina.global) {
+      try {
+        iina.global.postMessage(null, 'ha_command', { action, params });
+      } catch {
+        // Fall back to direct control below.
+      }
+    }
 
     try {
       switch (action) {
@@ -273,6 +284,33 @@ class HomeAssistantBridgePlugin {
         this.broadcastState(true);
       }
     }, 1000);
+  }
+
+  /**
+   * Relays commands from Home Assistant to the player cores and player state
+   * back to the connected WebSocket clients.
+   */
+  private setupPlayerRelay(): void {
+    if (typeof iina === 'undefined' || !iina.global) return;
+
+    // Receive playback state from player cores and forward to WebSocket clients.
+    try {
+      iina.global.onMessage('ha_player_state', (state: any) => {
+        if (typeof iina !== 'undefined' && iina.ws && this.activeConnections.size > 0) {
+          const payload: WsEventMessage = { event: 'state_update', data: state };
+          const jsonStr = JSON.stringify(payload);
+          for (const conn of this.activeConnections) {
+            try {
+              iina.ws.sendText(conn, jsonStr);
+            } catch {
+              this.activeConnections.delete(conn);
+            }
+          }
+        }
+      });
+    } catch {
+      // global module unavailable
+    }
   }
 
   private setupMenuItems(): void {

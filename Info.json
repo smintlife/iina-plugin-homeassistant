@@ -6,6 +6,7 @@
     "name": "AlexRoh"
   },
   "description": "Bi-directional Home Assistant remote control bridge for IINA media player via WebSocket",
+  "entry": "dist/main.js",
   "globalEntry": "dist/global.js",
   "permissions": [
     "network-request",
