@@ -63,15 +63,19 @@ export class IINAController {
     let playlistCount = 0;
     let speed = 1.0;
 
-    // Safe wrapper: iina.mpv.get can throw in the player-core context (e.g.
-    // for 'idle-active'), so we never let it break getState().
-    const mpvGet = (prop: string, fallback: any = undefined): any => {
-      try {
-        if (typeof iina === 'undefined' || !iina.mpv) return fallback;
-        return iina.mpv.get(prop);
-      } catch {
-        return fallback;
-      }
+    // IINA's mpv API has no generic .get(); use typed accessors.
+    // getString for strings, getNumber for numbers, getFlag for booleans.
+    const mpvStr = (p: string, fb = ''): string => {
+      try { return iina.mpv && iina.mpv.getString ? String(iina.mpv.getString(p) || '') : fb; }
+      catch { return fb; }
+    };
+    const mpvNum = (p: string, fb = 0): number => {
+      try { const v = iina.mpv && iina.mpv.getNumber ? iina.mpv.getNumber(p) : fb; return Number(v) || fb; }
+      catch { return fb; }
+    };
+    const mpvFlag = (p: string, fb = false): boolean => {
+      try { return iina.mpv && iina.mpv.getFlag ? Boolean(iina.mpv.getFlag(p)) : fb; }
+      catch { return fb; }
     };
 
     try {
@@ -81,66 +85,56 @@ export class IINAController {
         }
 
         if (iina.mpv) {
-          // Determine idle from path presence rather than 'idle-active',
-          // which throws in the player-core context.
-          path = String(mpvGet('path', '') || '');
+          // idle-active is a flag; if we can't read it, infer idle from path.
+          try { isIdle = mpvFlag('idle-active', false); } catch { isIdle = true; }
+          path = mpvStr('path');
           if (path) {
             hasWindow = true;
             isIdle = false;
           }
 
-          isPaused = Boolean(mpvGet('pause', false));
-          isBuffering = Boolean(mpvGet('paused-for-cache', false));
+          isPaused = mpvFlag('pause', false);
+          isBuffering = mpvFlag('paused-for-cache', false);
 
           try {
-            title = String(mpvGet('media-title', '') || mpvGet('filename', '') || '');
+            title = mpvStr('media-title') || mpvStr('filename');
           } catch {}
 
           try {
-            artist = String(
-              mpvGet('metadata/by-key/artist', '') ||
-                mpvGet('metadata/by-key/ARTIST', '') ||
-                mpvGet('metadata/artist', '') ||
-                ''
-            );
+            artist = mpvStr('metadata/by-key/artist') || mpvStr('metadata/by-key/ARTIST') || mpvStr('metadata/artist');
           } catch {}
 
           try {
-            album = String(
-              mpvGet('metadata/by-key/album', '') ||
-                mpvGet('metadata/by-key/ALBUM', '') ||
-                mpvGet('metadata/album', '') ||
-                ''
-            );
+            album = mpvStr('metadata/by-key/album') || mpvStr('metadata/by-key/ALBUM') || mpvStr('metadata/album');
           } catch {}
 
           try {
-            duration = Number(mpvGet('duration', 0)) || 0;
+            duration = mpvNum('duration', 0);
           } catch {}
 
           try {
-            position = Number(mpvGet('time-pos', 0)) || 0;
+            position = mpvNum('time-pos', 0);
           } catch {}
 
           try {
-            volume = Number(mpvGet('volume', 100));
+            volume = mpvNum('volume', 100);
             if (isNaN(volume)) volume = 100;
           } catch {}
 
           try {
-            muted = Boolean(mpvGet('mute', false));
+            muted = mpvFlag('mute', false);
           } catch {}
 
           try {
-            playlistPos = Number(mpvGet('playlist-pos', 0)) || 0;
+            playlistPos = mpvNum('playlist-pos', 0);
           } catch {}
 
           try {
-            playlistCount = Number(mpvGet('playlist-count', 0)) || 0;
+            playlistCount = mpvNum('playlist-count', 0);
           } catch {}
 
           try {
-            speed = Number(mpvGet('speed', 1.0)) || 1.0;
+            speed = mpvNum('speed', 1.0);
           } catch {}
         }
       }
@@ -193,7 +187,7 @@ export class IINAController {
       if (typeof iina !== 'undefined' && iina.mpv) {
         const props = ['path', 'media-title', 'filename', 'pause', 'idle-active', 'time-pos', 'duration', 'volume', 'playlist-count'];
         for (const p of props) {
-          try { raw['mpv.' + p] = iina.mpv.get(p); } catch (e) { raw['mpv.' + p] = 'ERR:' + e; }
+          try { raw['mpv.' + p] = iina.mpv.getString(p); } catch (e) { raw['mpv.' + p] = 'ERR:' + e; }
         }
       }
       iina.console.log('[HomeAssistant Bridge] DEBUG getState raw: ' + JSON.stringify(raw));
@@ -280,7 +274,7 @@ export class IINAController {
     if (typeof iina !== 'undefined') {
       let idle = true;
       let hasWindow = false;
-      try { idle = Boolean(iina.mpv && iina.mpv.get('idle-active')); } catch { idle = true; }
+      try { idle = iina.mpv && iina.mpv.getFlag ? Boolean(iina.mpv.getFlag('idle-active')) : false; } catch { idle = true; }
       try { hasWindow = Boolean(iina.core && iina.core.window); } catch { hasWindow = false; }
       iina.console.log(`[HomeAssistant Bridge] playMedia: url=${url} enqueue=${enqueue} idle=${idle} hasWindow=${hasWindow}`);
 
@@ -322,8 +316,8 @@ export class IINAController {
   }
 
   public turnOn(): void {
-    if (typeof iina !== 'undefined' && iina.mpv) {
-      const isPaused = Boolean(iina.mpv.get('pause'));
+    if (typeof iina !== 'undefined' && iina.mpv && iina.mpv.getFlag) {
+      const isPaused = Boolean(iina.mpv.getFlag('pause'));
       if (isPaused) {
         iina.mpv.set('pause', false);
       }
