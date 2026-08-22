@@ -341,16 +341,21 @@ class HomeAssistantBridgePlugin {
     // Receive playback state from player cores and forward to WebSocket clients.
     try {
       iina.global.onMessage('ha_player_state', (state: any) => {
+        log(`RELAY: received ha_player_state state=${state && state.state}`);
         if (typeof iina !== 'undefined' && iina.ws && this.activeConnections.size > 0) {
           const payload: WsEventMessage = { event: 'state_update', data: state };
           const jsonStr = JSON.stringify(payload);
+          log(`RELAY: forwarding state_update to ${this.activeConnections.size} connection(s)`);
           for (const conn of this.activeConnections) {
             try {
               iina.ws.sendText(conn, jsonStr);
+              log(`RELAY: state_update sent to ${conn}`);
             } catch {
               this.activeConnections.delete(conn);
             }
           }
+        } else {
+          log(`RELAY: NOT forwarding (ws=${typeof iina !== 'undefined' && !!iina.ws}, conns=${this.activeConnections.size})`);
         }
       });
     } catch {

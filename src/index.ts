@@ -28,6 +28,7 @@ function broadcastState(force = false): void {
       return;
     }
     lastStateJson = json;
+    iina.console.log(`[HomeAssistant Bridge] CORE broadcastState: state=${state.state} force=${force}`);
     if (typeof iina !== 'undefined' && iina.global) {
       iina.global.postMessage('ha_player_state', state);
     }
