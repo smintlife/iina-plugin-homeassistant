@@ -151,13 +151,14 @@ if (typeof iina !== 'undefined' && iina.event) {
   }
 }
 
-// Periodic position sync while playing.
-setInterval(() => {
-  const state = controller.getState();
-  if (state.state === 'playing') {
-    broadcastState(true);
-  }
-}, 1000);
+  // Periodic position sync while playing.
+  setInterval(() => {
+    controller.debugDumpState();
+    const state = controller.getState();
+    if (state.state === 'playing') {
+      broadcastState(true);
+    }
+  }, 1000);
 
 iina.console.log('[HomeAssistant Bridge] Player core instance loaded.');
 broadcastState(true);

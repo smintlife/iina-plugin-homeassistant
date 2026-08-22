@@ -182,6 +182,26 @@ export class IINAController {
     };
   }
 
+  public debugDumpState(): void {
+    try {
+      const raw: any = {
+        hasIina: typeof iina !== 'undefined',
+        hasMpv: typeof iina !== 'undefined' && !!iina.mpv,
+        hasCore: typeof iina !== 'undefined' && !!iina.core,
+        hasCoreWindow: typeof iina !== 'undefined' && !!(iina.core && iina.core.window),
+      };
+      if (typeof iina !== 'undefined' && iina.mpv) {
+        const props = ['path', 'media-title', 'filename', 'pause', 'idle-active', 'time-pos', 'duration', 'volume', 'playlist-count'];
+        for (const p of props) {
+          try { raw['mpv.' + p] = iina.mpv.get(p); } catch (e) { raw['mpv.' + p] = 'ERR:' + e; }
+        }
+      }
+      iina.console.log('[HomeAssistant Bridge] DEBUG getState raw: ' + JSON.stringify(raw));
+    } catch (err) {
+      iina.console.log('[HomeAssistant Bridge] DEBUG getState error: ' + err);
+    }
+  }
+
   public play(): void {
     if (typeof iina !== 'undefined' && iina.mpv) {
       iina.mpv.set('pause', false);
