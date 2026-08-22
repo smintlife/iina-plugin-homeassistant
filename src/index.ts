@@ -18,6 +18,35 @@ const ttsManager = new TTSManager();
 const zeroconfHelper = new ZeroconfHelper();
 const controller = new IINAController(ttsManager, zeroconfHelper);
 
+// Serial command queue: prevents rapid synchronous mpv calls from freezing
+// IINA. Each command runs one at a time with a tiny gap between them.
+type QueuedCommand = () => void;
+const commandQueue: QueuedCommand[] = [];
+let queueRunning = false;
+
+function enqueueCommand(fn: QueuedCommand): void {
+  commandQueue.push(fn);
+  if (!queueRunning) {
+    runQueue();
+  }
+}
+
+function runQueue(): void {
+  if (commandQueue.length === 0) {
+    queueRunning = false;
+    return;
+  }
+  queueRunning = true;
+  const fn = commandQueue.shift()!;
+  try {
+    fn();
+  } catch (err) {
+    iina.console.log('[HomeAssistant Bridge] queued command error: ' + err);
+  }
+  // Small gap so the player core event loop can breathe between commands.
+  setTimeout(runQueue, 20);
+}
+
 let lastStateJson = '';
 
 function broadcastState(force = false): void {
@@ -57,61 +86,60 @@ if (typeof iina !== 'undefined' && iina.global) {
       iina.console.log(`[HomeAssistant Bridge] CORE RECV <- action=${data.action} params=${JSON.stringify(data.params)}`);
       switch (data.action) {
         case 'play':
-          controller.play();
+          enqueueCommand(() => controller.play());
           break;
         case 'pause':
-          controller.pause();
+          enqueueCommand(() => controller.pause());
           break;
         case 'play_pause':
-          controller.playPause();
+          enqueueCommand(() => controller.playPause());
           break;
         case 'stop':
-          controller.stop();
+          enqueueCommand(() => controller.stop());
           break;
         case 'seek':
-          controller.seek(data.params && data.params.position, data.params && data.params.relative);
+          enqueueCommand(() => controller.seek(data.params && data.params.position, data.params && data.params.relative));
           break;
         case 'volume_set':
           if (data.params && typeof data.params.volume === 'number') {
-            controller.setVolume(data.params.volume);
+            enqueueCommand(() => controller.setVolume(data.params.volume));
           }
           break;
         case 'volume_mute':
           if (data.params && typeof data.params.mute === 'boolean') {
-            controller.setMute(data.params.mute);
+            enqueueCommand(() => controller.setMute(data.params.mute));
           }
           break;
         case 'volume_step':
           if (data.params && typeof data.params.step === 'number') {
-            controller.volumeStep(data.params.step);
+            enqueueCommand(() => controller.volumeStep(data.params.step));
           }
           break;
         case 'next':
-          controller.nextTrack();
+          enqueueCommand(() => controller.nextTrack());
           break;
         case 'prev':
-          controller.prevTrack();
+          enqueueCommand(() => controller.prevTrack());
           break;
         case 'play_media':
           if (data.params && data.params.url) {
             iina.console.log(`[HomeAssistant Bridge] CORE play_media: opening url=${data.params.url}`);
-            // Defer so the onMessage handler returns immediately and cannot freeze.
-            setTimeout(() => {
+            enqueueCommand(() => {
               try {
                 controller.playMedia(data.params.url, data.params.enqueue || 'play', Boolean(data.params.announce));
               } catch (err) {
                 iina.console.log('[HomeAssistant Bridge] CORE play_media ERROR: ' + err);
               }
-            }, 0);
+            });
           } else {
             iina.console.log('[HomeAssistant Bridge] CORE play_media: missing url');
           }
           break;
         case 'turn_off':
-          controller.turnOff();
+          enqueueCommand(() => controller.turnOff());
           break;
         case 'turn_on':
-          controller.turnOn();
+          enqueueCommand(() => controller.turnOn());
           break;
         case 'get_state':
           broadcastState(true);
