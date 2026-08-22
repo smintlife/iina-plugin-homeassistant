@@ -125,49 +125,13 @@ class HomeAssistantBridgePlugin {
     const action = req.action;
     const params = req.params || {};
 
+    // Respond to Home Assistant immediately so it never waits on an ack that
+    // may be delayed by the player core. The actual work is relayed after.
+    this.sendResponse(conn, { id: req.id, success: true, result: null });
+
     // The global entry has no mpv/core access, so it cannot execute playback
-    // commands itself. It only relays them to the player core(s), which own
-    // the actual playback. We send the response immediately (fire-and-forget)
-    // so Home Assistant doesn't wait for an ack that never comes.
+    // commands itself. It only relays them to the player core(s).
     this.relayCommand(action, params);
-
-    let success = true;
-    let error: string | undefined;
-    let result: any = null;
-
-    try {
-      switch (action) {
-        case 'play_media':
-          if (!params.url) {
-            success = false;
-            error = 'Missing url parameter';
-          }
-          // Actual open/load is handled by the player core (relayed above)
-          // or by createPlayerInstance when no player is active.
-          break;
-
-        case 'get_state':
-          // Only the player core can read real state; relay handles that.
-          // Return null here; the genuine state arrives via state_update pushes.
-          result = null;
-          break;
-
-        default:
-          // All other actions are relayed to the player core.
-          break;
-      }
-    } catch (err: any) {
-      success = false;
-      error = err ? err.message : 'Unknown internal error';
-    }
-
-    // Send response back immediately.
-    this.sendResponse(conn, {
-      id: req.id,
-      success,
-      error,
-      result,
-    });
   }
 
   private sendResponse(conn: string, resp: WsResponseMessage): void {

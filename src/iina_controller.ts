@@ -211,21 +211,31 @@ export class IINAController {
   }
 
   public setVolume(volume: number): void {
-    if (typeof iina !== 'undefined' && iina.mpv) {
-      const clamped = Math.max(0, Math.min(100, volume));
+    if (typeof iina === 'undefined' || !iina.mpv) return;
+    try {
+      const clamped = Math.max(0, Math.min(100, Math.round(volume)));
       iina.mpv.set('volume', clamped);
+      iina.console.log('[HomeAssistant Bridge] setVolume -> ' + clamped);
+    } catch (err) {
+      iina.console.log('[HomeAssistant Bridge] setVolume ERROR: ' + err);
     }
   }
 
   public setMute(mute: boolean): void {
-    if (typeof iina !== 'undefined' && iina.mpv) {
+    if (typeof iina === 'undefined' || !iina.mpv) return;
+    try {
       iina.mpv.set('mute', mute);
+    } catch (err) {
+      iina.console.log('[HomeAssistant Bridge] setMute ERROR: ' + err);
     }
   }
 
   public volumeStep(step: number): void {
-    if (typeof iina !== 'undefined' && iina.mpv) {
+    if (typeof iina === 'undefined' || !iina.mpv) return;
+    try {
       iina.mpv.command('add', ['volume', step]);
+    } catch (err) {
+      iina.console.log('[HomeAssistant Bridge] volumeStep ERROR: ' + err);
     }
   }
 
