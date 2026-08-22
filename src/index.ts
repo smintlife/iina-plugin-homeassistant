@@ -155,11 +155,11 @@ if (typeof iina !== 'undefined' && iina.global) {
 }
 
 // Forward relevant player events to the global entry.
+// NOTE: do NOT listen to mpv.volume.changed / mpv.mute.changed here — reading
+// mpv state inside that callback (via getState) can recurse and freeze IINA.
 if (typeof iina !== 'undefined' && iina.event) {
   const eventsToListen = [
     'mpv.pause.changed',
-    'mpv.volume.changed',
-    'mpv.mute.changed',
     'mpv.duration.changed',
     'mpv.media-title.changed',
     'mpv.idle-active.changed',
@@ -179,7 +179,8 @@ if (typeof iina !== 'undefined' && iina.event) {
   }
 }
 
-  // Periodic position sync while playing.
+  // Periodic position sync while playing. This is the primary state source;
+  // it avoids feedback loops from volume/mute change events.
   setInterval(() => {
     const state = controller.getState();
     if (state.state === 'playing' || state.state === 'paused') {

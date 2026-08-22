@@ -214,7 +214,13 @@ export class IINAController {
     if (typeof iina === 'undefined' || !iina.mpv) return;
     try {
       const clamped = Math.max(0, Math.min(100, Math.round(volume)));
-      iina.mpv.set('volume', clamped);
+      // Use a command instead of mpv.set to avoid potential blocking and
+      // feedback loops through the volume-changed event.
+      if (typeof iina.mpv.command === 'function') {
+        iina.mpv.command('set', ['volume', String(clamped)]);
+      } else if (iina.mpv.set) {
+        iina.mpv.set('volume', clamped);
+      }
       iina.console.log('[HomeAssistant Bridge] setVolume -> ' + clamped);
     } catch (err) {
       iina.console.log('[HomeAssistant Bridge] setVolume ERROR: ' + err);
