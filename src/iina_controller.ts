@@ -63,6 +63,17 @@ export class IINAController {
     let playlistCount = 0;
     let speed = 1.0;
 
+    // Safe wrapper: iina.mpv.get can throw in the player-core context (e.g.
+    // for 'idle-active'), so we never let it break getState().
+    const mpvGet = (prop: string, fallback: any = undefined): any => {
+      try {
+        if (typeof iina === 'undefined' || !iina.mpv) return fallback;
+        return iina.mpv.get(prop);
+      } catch {
+        return fallback;
+      }
+    };
+
     try {
       if (typeof iina !== 'undefined') {
         if (iina.core && iina.core.window) {
@@ -70,76 +81,66 @@ export class IINAController {
         }
 
         if (iina.mpv) {
-          try {
-            isIdle = Boolean(iina.mpv.get('idle-active'));
-          } catch {
-            isIdle = true;
+          // Determine idle from path presence rather than 'idle-active',
+          // which throws in the player-core context.
+          path = String(mpvGet('path', '') || '');
+          if (path) {
+            hasWindow = true;
+            isIdle = false;
           }
 
-          try {
-            isPaused = Boolean(iina.mpv.get('pause'));
-          } catch {}
+          isPaused = Boolean(mpvGet('pause', false));
+          isBuffering = Boolean(mpvGet('paused-for-cache', false));
 
           try {
-            isBuffering = Boolean(iina.mpv.get('paused-for-cache'));
-          } catch {}
-
-          try {
-            path = String(iina.mpv.get('path') || '');
-            if (path) {
-              hasWindow = true;
-            }
-          } catch {}
-
-          try {
-            title = String(iina.mpv.get('media-title') || iina.mpv.get('filename') || '');
+            title = String(mpvGet('media-title', '') || mpvGet('filename', '') || '');
           } catch {}
 
           try {
             artist = String(
-              iina.mpv.get('metadata/by-key/artist') ||
-                iina.mpv.get('metadata/by-key/ARTIST') ||
-                iina.mpv.get('metadata/artist') ||
+              mpvGet('metadata/by-key/artist', '') ||
+                mpvGet('metadata/by-key/ARTIST', '') ||
+                mpvGet('metadata/artist', '') ||
                 ''
             );
           } catch {}
 
           try {
             album = String(
-              iina.mpv.get('metadata/by-key/album') ||
-                iina.mpv.get('metadata/by-key/ALBUM') ||
-                iina.mpv.get('metadata/album') ||
+              mpvGet('metadata/by-key/album', '') ||
+                mpvGet('metadata/by-key/ALBUM', '') ||
+                mpvGet('metadata/album', '') ||
                 ''
             );
           } catch {}
 
           try {
-            duration = Number(iina.mpv.get('duration')) || 0;
+            duration = Number(mpvGet('duration', 0)) || 0;
           } catch {}
 
           try {
-            position = Number(iina.mpv.get('time-pos')) || 0;
+            position = Number(mpvGet('time-pos', 0)) || 0;
           } catch {}
 
           try {
-            volume = Number(iina.mpv.get('volume'));
+            volume = Number(mpvGet('volume', 100));
             if (isNaN(volume)) volume = 100;
           } catch {}
 
           try {
-            muted = Boolean(iina.mpv.get('mute'));
+            muted = Boolean(mpvGet('mute', false));
           } catch {}
 
           try {
-            playlistPos = Number(iina.mpv.get('playlist-pos')) || 0;
+            playlistPos = Number(mpvGet('playlist-pos', 0)) || 0;
           } catch {}
 
           try {
-            playlistCount = Number(iina.mpv.get('playlist-count')) || 0;
+            playlistCount = Number(mpvGet('playlist-count', 0)) || 0;
           } catch {}
 
           try {
-            speed = Number(iina.mpv.get('speed')) || 1.0;
+            speed = Number(mpvGet('speed', 1.0)) || 1.0;
           } catch {}
         }
       }
