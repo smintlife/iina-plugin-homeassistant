@@ -153,9 +153,8 @@ if (typeof iina !== 'undefined' && iina.event) {
 
   // Periodic position sync while playing.
   setInterval(() => {
-    controller.debugDumpState();
     const state = controller.getState();
-    if (state.state === 'playing') {
+    if (state.state === 'playing' || state.state === 'paused') {
       broadcastState(true);
     }
   }, 1000);

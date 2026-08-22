@@ -124,64 +124,19 @@ class HomeAssistantBridgePlugin {
   private async handleIncomingRequest(conn: string, req: WsRequestMessage): Promise<void> {
     const action = req.action;
     const params = req.params || {};
+
+    // The global entry has no mpv/core access, so it cannot execute playback
+    // commands itself. It only relays them to the player core(s), which own
+    // the actual playback. We send the response immediately (fire-and-forget)
+    // so Home Assistant doesn't wait for an ack that never comes.
+    this.relayCommand(action, params);
+
     let success = true;
     let error: string | undefined;
     let result: any = null;
 
-    // Relay the command to all player cores (main entries). They own the
-    // actual playback control and will report state back via the relay.
-    // Commands that require a living player instance (e.g. play_media when
-    // IINA is idle) will create a player if needed.
-    this.relayCommand(action, params);
-
     try {
       switch (action) {
-        case 'play':
-          this.controller.play();
-          break;
-
-        case 'pause':
-          this.controller.pause();
-          break;
-
-        case 'play_pause':
-          this.controller.playPause();
-          break;
-
-        case 'stop':
-          this.controller.stop();
-          break;
-
-        case 'seek':
-          this.controller.seek(params.position, params.relative);
-          break;
-
-        case 'volume_set':
-          if (typeof params.volume === 'number') {
-            this.controller.setVolume(params.volume);
-          }
-          break;
-
-        case 'volume_mute':
-          if (typeof params.mute === 'boolean') {
-            this.controller.setMute(params.mute);
-          }
-          break;
-
-        case 'volume_step':
-          if (typeof params.step === 'number') {
-            this.controller.volumeStep(params.step);
-          }
-          break;
-
-        case 'next':
-          this.controller.nextTrack();
-          break;
-
-        case 'prev':
-          this.controller.prevTrack();
-          break;
-
         case 'play_media':
           if (!params.url) {
             success = false;
@@ -191,37 +146,28 @@ class HomeAssistantBridgePlugin {
           // or by createPlayerInstance when no player is active.
           break;
 
-        case 'turn_off':
-          this.controller.turnOff();
-          break;
-
-        case 'turn_on':
-          this.controller.turnOn();
-          break;
-
         case 'get_state':
-          result = this.controller.getState();
+          // Only the player core can read real state; relay handles that.
+          // Return null here; the genuine state arrives via state_update pushes.
+          result = null;
           break;
 
         default:
-          success = false;
-          error = `Unknown action: ${action}`;
+          // All other actions are relayed to the player core.
+          break;
       }
     } catch (err: any) {
       success = false;
       error = err ? err.message : 'Unknown internal error';
     }
 
-    // Send response back
+    // Send response back immediately.
     this.sendResponse(conn, {
       id: req.id,
       success,
       error,
       result,
     });
-
-    // Broadcast updated state to all connected clients
-    this.broadcastState();
   }
 
   private sendResponse(conn: string, resp: WsResponseMessage): void {
